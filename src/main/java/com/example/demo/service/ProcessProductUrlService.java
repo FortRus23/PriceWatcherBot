@@ -8,12 +8,12 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @Component
 @AllArgsConstructor
 public class ProcessProductUrlService {
 
-    private final PriceParserService priceParserService;
     private final ProductService productService;
     private final UserRepository userRepository;
     private final Map<Long, UserState> userStates;
@@ -21,6 +21,15 @@ public class ProcessProductUrlService {
 
     public void handle(long userId, String input) {
         userStates.put(userId, UserState.PROCESSING_PRODUCT_URL);
+
+        boolean isMatch = Pattern.compile("^https?://(?:www\\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b[-a-zA-Z0-9()@:%_+.~#?&/=]*$")
+                .matcher(input)
+                .find();
+
+        if (!isMatch) {
+            senderService.sendText(userId, "Прислан не верный URL");
+            return;
+        }
 
         User user = userRepository.findByUserId(userId).orElseThrow(() -> new RuntimeException("User not found"));
 
